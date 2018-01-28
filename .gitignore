@@ -99,3 +99,10 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# misc
+.DS_STORE
+*~
+
+# Directories
+data/
