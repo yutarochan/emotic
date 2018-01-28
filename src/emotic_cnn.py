@@ -3,12 +3,36 @@ EMOTIC CNN [Keras Version]
 Author: Yuya Jeremy Ong (yjo5006@psu.edu)
 '''
 from __future__ import print_function
+import numpy as np
 from keras import Input
 from keras.models import Model
 from keras.layers import Average, Dense, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.applications.vgg16 import VGG16 as VGG16
 
+''' Loss Functions '''
+# SOURCE: https://github.com/xianlopez/emotic_tf/blob/master/cnn_actions.py
+
+# Discrete Loss Weight Function
+def disc_loss(y_true, c):
+    class_sum = np.sum(y_true, axis=0)
+    mask = class_sum > 0.5
+    prev_weight = np.ones((NDIM_DISC)) / np.log(class_sum + c)
+    disc_weight = mask * prev_weight
+    return disc_weight
+
+# Categorical Loss Function
+def cat_loss(y_true, y_pred):
+    return None
+
+# VAD Loss Function
+def vad_loss(y_true, y_pred):
+    return None
+
+# Total Loss
+# def 
+
+''' CNN Model '''
 def build_model():
     # Input Channels
     input_1 = Input(shape=(256, 256, 3, ), name='body')
