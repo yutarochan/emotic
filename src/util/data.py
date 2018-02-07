@@ -60,7 +60,6 @@ class EMOTICData(Dataset):
         # Extract Image
         bb = self.annot[index][4][0][0][0][0]
         image = Image.open(open(filename, 'rb')).convert('RGB')
-        if image == None: print('NONE DETECTED! ' + str(filename))
         body = image.crop((int(bb[0]), int(bb[1]), int(bb[3]), int(bb[2])))
 
         # Extract Label
