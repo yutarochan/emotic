@@ -20,8 +20,7 @@ from tqdm import tqdm
 from util.data import EMOTICData
 from emotic import EmoticCNN, DiscreteLoss
 
-def train_epoch(epoch, args, model, data_loader, optimizer):    
-    # print('\nEPOCH ', epoch, ': ')
+def train_epoch(epoch, args, model, data_loader, optimizer):
     model.train()
     
     train_loss = 0
@@ -39,9 +38,7 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
         if params.USE_CUDA:
             body, image, disc, cont = body.cuda(), image.cuda(), disc.cuda(), cont.cuda()
         
-        optimizer.zero_grad()
-        # body, image, disc, cont = Variable(body), Variable(image), Variable(disc), Variable(cont)
-        
+        # optimizer.zero_grad()
         disc_pred, cont_pred = model(body, image)
 
 if __name__ == '__main__':
@@ -55,11 +52,9 @@ if __name__ == '__main__':
     print('-'*80)
 
     # Data Transformation and Normalization
+    # TODO: Check to see if we have properly normalized the image.
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
-    transform = transforms.Compose([
-            transforms.Resize(params.IM_DIM),
-            transforms.ToTensor(),
-            normalize])
+    transform = transforms.Compose([transforms.Resize(params.IM_DIM), transforms.ToTensor(), normalize])
 
     # Load Dataset Generator Objects
     train_data = EMOTICData(params.DATA_DIR, params.ANNOT_DIR, 'train', transform=transform)
@@ -67,9 +62,9 @@ if __name__ == '__main__':
     test_data  = EMOTICData(params.DATA_DIR, params.ANNOT_DIR, 'test', transform=transform)
     
     # Initialize Dataset Loader Objects
-    train_loader = DataLoader(train_data, shuffle=params.TRAIN_DATA_SHUFFLE, num_workers=params.NUM_WORKERS)
+    train_loader = DataLoader(train_data, batch_size=params.TRAIN_BATCH_SIZE, shuffle=params.TRAIN_DATA_SHUFFLE, num_workers=params.NUM_WORKERS)
     valid_lodaer = DataLoader(valid_data, batch_size=params.VALID_BATCH_SIZE, shuffle=params.VALID_DATA_SHUFFLE, num_workers=params.NUM_WORKERS)
-    test_loader  = DataLoader(test_data, batch_size=params.TEST_BATCH_SIZE, shuffle=False, num_workers=params.NUM_WORKERS)
+    test_loader  = DataLoader(test_data,  shuffle=False, num_workers=params.NUM_WORKERS)
 
     # Initialize Model
     print('-'*80)
@@ -97,8 +92,11 @@ if __name__ == '__main__':
     # Define Cost Functions and Optimization Criterion
     disc_loss = emotic.DiscreteLoss()
     cont_loss = None
+
+    # Initialize Optimizer
+    optimizer = nn.CrossEntropyLoss().cuda()
     
     # Perfom Training Iterations
     for epoch in range(params.START_EPOCH, params.TRAIN_EPOCH+1):
-        print('EPOCH ', epoch, '/', params.TRAIN_EPOCH+1)
-        train_epoch(epoch, None, model, train_loader, None)
+        print('EPOCH ',epoch,'/',params.TRAIN_EPOCH)
+        train_epoch(epoch, None, model, train_loader, optimizer)
