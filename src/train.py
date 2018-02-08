@@ -20,9 +20,13 @@ from tqdm import tqdm
 from util.data import EMOTICData
 from emotic import EmoticCNN, DiscreteLoss
 
+# Ignore Warnings
+import warnings
+warnings.filterwarnings("ignore")
+
 # Initialize Loss Function
-disc_loss = emotic.DiscreteLoss()
-cont_loss = None
+disc_loss = nn.MultiLabelMarginLoss(size_average=False)
+# cont_loss = None
 
 def train_epoch(epoch, args, model, data_loader, optimizer):
     model.train()
@@ -32,11 +36,13 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
     total = 0
     
     for batch_idx, data in enumerate(data_loader):
+        if batch_idx % 2000 == 0: print('PROCESSING: ' + str(batch_idx))
+        
         # Initialize Data Variables
-        image = Variable(data[0][0])
-        body = Variable(data[0][1])
-        disc = data[1][0]
-        cont = data[1][1]
+        image = Variable(data[0][0], requires_grad=True)
+        body = Variable(data[0][1], requires_grad=True)
+        disc = Variable(data[1][0], requires_grad=False)
+        cont = Variable(data[1][1], requires_grad=False)
 
         # Utilize CUDA
         if params.USE_CUDA:
@@ -48,7 +54,13 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
 
         # Compute Loss & Backprop
         d_loss = disc_loss(disc_pred, disc)
-        print(d_loss)
+        d_loss.backward()
+
+        optimizer.step()
+        
+        train_loss += d_loss.data[0]
+
+    print('LOSS: ' + str(train_loss))
 
 if __name__ == '__main__':
     print('='*80)
@@ -99,11 +111,11 @@ if __name__ == '__main__':
     print('-'*80)
     
     # Define Cost Functions and Optimization Criterion
-    disc_loss = emotic.DiscreteLoss()
-    cont_loss = None
+    # disc_loss = emotic.DiscreteLoss()
+    # cont_loss = None
 
     # Initialize Optimizer
-    optimizer = nn.CrossEntropyLoss().cuda()
+    optimizer = optim.SGD(model.parameters(), lr=params.TRAIN_LR, momentum=0.9)
     
     # Perfom Training Iterations
     for epoch in range(params.START_EPOCH, params.TRAIN_EPOCH+1):
