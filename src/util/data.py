@@ -48,7 +48,7 @@ class EMOTICData(Dataset):
         end = time.time()
 
         # Print Statement
-        print('LOADED ', self.MODE, ' [', len(self.annot), '] ', (end - start), ' sec.')
+        print('LOADED', self.MODE, '\t[', len(self.annot),']\t', (end - start), ' sec.')
 
     def __len__(self):
         return len(self.annot)

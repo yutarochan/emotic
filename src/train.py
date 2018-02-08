@@ -20,6 +20,10 @@ from tqdm import tqdm
 from util.data import EMOTICData
 from emotic import EmoticCNN, DiscreteLoss
 
+# Initialize Loss Function
+disc_loss = emotic.DiscreteLoss()
+cont_loss = None
+
 def train_epoch(epoch, args, model, data_loader, optimizer):
     model.train()
     
@@ -31,15 +35,20 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
         # Initialize Data Variables
         image = Variable(data[0][0])
         body = Variable(data[0][1])
-        disc = Variable(data[1][0])
-        cont = Variable(data[1][1])
+        disc = data[1][0]
+        cont = data[1][1]
 
         # Utilize CUDA
         if params.USE_CUDA:
             body, image, disc, cont = body.cuda(), image.cuda(), disc.cuda(), cont.cuda()
         
-        # optimizer.zero_grad()
+        # Generate Predictions
+        optimizer.zero_grad()
         disc_pred, cont_pred = model(body, image)
+
+        # Compute Loss & Backprop
+        d_loss = disc_loss(disc_pred, disc)
+        print(d_loss)
 
 if __name__ == '__main__':
     print('='*80)

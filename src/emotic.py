@@ -4,11 +4,13 @@ Author: Yuya Jeremy Ong (yjo5006@psu.edu)
 '''
 from __future__ import print_function
 import params
+import numpy as np
 
 import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 ''' Model '''
 class EmoticCNN(nn.Module):
@@ -75,19 +77,37 @@ def model_summary(model):
 # TODO: Experiment with various loss functions to empirically observe and compare results.
 
 class DiscreteLoss(nn.Module):
-    # TODO: Check how data formatting is being performed during backpropagation
+    # TODO: Enable branched execution for CUDA based processing.
     def __init__(self, weight=None):
         super(DiscreteLoss, self).__init__()
-    
-    def forward(self, input, target):
-        dim = input.dim()
-        print(dim)
+        self.weight = weight
 
-        # Compute Batch Weights
-        if weight:
-            weight = Variable(weight)
-        elif weight is None:
-            sum_class = torch.sum(A, dim=0)
-            mask = sum_classes > 0.5
-            prev_w = Variable(torch.ones(params.NDIM_DISC)) / torch.log(sum_class + params.LDSIC_C)
-            disc_w = mask * prev_w
+    def forward(self, input, target):
+        if self.weight:
+            disc_w = torch.ones(params.NDIM_DISC)
+        else:
+            sum_class = torch.sum(target, dim=0).float()
+            mask = sum_class > 0.5
+            # mask = sum_class.float() > torch.FloatTensor(3).fill_(0.5)
+            
+            prev_w = torch.FloatTensor(params.NDIM_DISC).cuda() / torch.log(sum_class + params.LDISC_C)
+            # prev_w = torch.FloatTensor(torch.ones(3)) / torch.log(sum_class.float() + torch.FloatTensor(3).fill_(1.6))
+            disc_w = mask.float() * prev_w
+
+        # Compute Weighted Loss
+        N = input.size()[0]
+        loss = torch.sum((input.data - target.float()).pow(2), dim=0) / N
+        w_loss = loss * disc_w
+        
+        # Return Loss Back as Torch Tensor
+        return w_loss
+
+if __name__ == '__main__':
+    ''' Discrete Loss Function Test '''
+    loss = DiscreteLoss()
+    
+    y_pred = torch.LongTensor([[1, 0, 1], [0, 1, 1]]).cuda()
+    y_real = torch.LongTensor([[0, 1, 1], [1, 1, 0]]).cuda()
+
+    out = loss(y_pred, y_real)
+    print(out)
