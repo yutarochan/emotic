@@ -101,22 +101,20 @@ class DiscreteLoss(nn.Module):
         # Compute Weighted Loss
         N = input.size()[0]
         loss = torch.sum((input.data - target.data.float()).pow(2), dim=0) / N
-        w_loss = loss * disc_w
+        w_loss = torch.sum(loss * disc_w, dim=0)
         
         # Return Loss Back as Torch Tensor
-        return w_loss
+        return Variable(w_loss, requires_grad=True)
 
 def disc_weight(input, target, weight=None):
-    if weight:
+    if weight == 'ONES':
         disc_w = torch.ones(params.NDIM_DISC)
     else:
         sum_class = torch.sum(target, dim=0).float()
         mask = sum_class > 0.5
-        # mask = sum_class.float() > torch.FloatTensor(3).fill_(0.5)                                                                                                     
 
         if params.USE_CUDA:
             prev_w = torch.FloatTensor(params.NDIM_DISC).cuda() / torch.log(sum_class.data.float() + params.LDISC_C)
-            # prev_w = torch.FloatTensor(torch.ones(3)) / torch.log(sum_class.float() + torch.FloatTensor(3).fill_(1.6))                                                 
         else:
             prev_w = torch.FloatTensor(params.NDIM_DISC) / torch.log(sum_class.data.float() + params.LDISC_C)
 
@@ -124,8 +122,9 @@ def disc_weight(input, target, weight=None):
     
     return disc_w
 
+'''
 if __name__ == '__main__':
-    ''' Discrete Loss Function Test '''
+    # Discrete Loss Function Test
     loss = DiscreteLoss()
     
     y_pred = torch.LongTensor([[1, 0, 1], [0, 1, 1]]).cuda()
@@ -133,3 +132,4 @@ if __name__ == '__main__':
 
     out = loss(y_pred, y_real)
     print(out)
+'''

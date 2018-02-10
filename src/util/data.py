@@ -14,6 +14,7 @@ import scipy.io as sio
 from PIL import ImageFile
 from scipy.misc import imresize
 from multiprocessing import Pool
+from torch.autograd import Variable
 import torchvision.transforms as transforms
 from torch.utils.data.dataset import Dataset
 
@@ -43,7 +44,7 @@ class EMOTICData(Dataset):
         self.transform = transform
         
         # Load Annotation File
-        start = time.time() 
+        start = time.time()
         self.annot = sio.loadmat(self.ANOT_DIR)[self.MODE][0]
         end = time.time()
 
@@ -54,6 +55,7 @@ class EMOTICData(Dataset):
         return len(self.annot)
 
     def __getitem__(self, index):
+        # print('LOADING INDEX: ' + str(index))
         # Load Image File
         filename = self.ROOT_DIR + '/' + self.annot[index][1][0] + '/' + self.annot[index][0][0]
 
@@ -67,12 +69,15 @@ class EMOTICData(Dataset):
         for x in self.annot[index][4][0][0][1][0][0][0][0]: category[cat_name.index(x[0])] = 1
         vad = np.array([x[0][0] for x in self.annot[index][4][0][0][2][0][0]])
 
+        # Perform NaN Checks
+        if np.isnan(category.any()) or np.isnan(vad.any()): return None
+
         # Perform Data Transformations
         if self.transform:
             image = self.transform(image)
             body = self.transform(body)
         
-        return ([image, body], [category, vad])
+        return (image, body, category, vad)
 
 if __name__ == '__main__':
     ROOT_DIR = '/storage/home/yjo5006/work/emotic_data/'
@@ -93,7 +98,7 @@ if __name__ == '__main__':
     end = time.time()
     print('Train - Total Time Elapsed: ' + str(end - start) + ' sec.')
 
-    sample = data[0]
+    # sample = data[0]
 
     '''
     # Load Validation Data
@@ -108,3 +113,17 @@ if __name__ == '__main__':
     end = time.time()
     print('Validation - Total Time Elapsed: ' + str(end - start) + ' sec.')
     '''
+
+    # Initialize Data Loader
+    data_loader = torch.utils.data.DataLoader(data, batch_size=4)
+
+    # Dataset Batch Loading
+    
+    for batch_idx, sample in enumerate(data_loader):
+        image = Variable(sample[0])
+        print(sample[3])
+
+        # print(len(sample))
+        # print(sample[batch_idx][3])
+
+    # print(data[263]) # Test Load

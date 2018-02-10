@@ -24,26 +24,25 @@ from emotic import EmoticCNN, DiscreteLoss
 import warnings
 warnings.filterwarnings("ignore")
 
-# Initialize Loss Function
-disc_loss = nn.MultiLabelMarginLoss(size_average=False)
-# cont_loss = None
-
 def train_epoch(epoch, args, model, data_loader, optimizer):
     model.train()
     
-    train_loss = 0
-    correct = 0
-    total = 0
+    # TODO: Improve Loss Function Metric Tracking
+    # train_loss = 0
+    # correct = 0
+    # total = 0
     
+    # TODO: Add a better UI for tracking the training progress of a model.
     for batch_idx, data in enumerate(data_loader):
-        if batch_idx % 2000 == 0: print('PROCESSING: ' + str(batch_idx))
-        
-        # Initialize Data Variables
-        image = Variable(data[0][0], requires_grad=True)
-        body = Variable(data[0][1], requires_grad=True)
-        disc = Variable(data[1][0], requires_grad=False)
-        cont = Variable(data[1][1], requires_grad=False)
+        print('BATCH: ' + str(batch_idx))
+        # TODO: Fix underlying data loading to remove any NaN samples.
 
+        # Initialize Data Variables
+        image = Variable(data[0], requires_grad=True)
+        body  = Variable(data[1], requires_grad=True)
+        disc  = Variable(data[2], requires_grad=False)
+        cont  = Variable(data[3], requires_grad=False)
+        
         # Utilize CUDA
         if params.USE_CUDA:
             body, image, disc, cont = body.cuda(), image.cuda(), disc.cuda(), cont.cuda()
@@ -52,15 +51,22 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
         optimizer.zero_grad()
         disc_pred, cont_pred = model(body, image)
 
+        # Compute Loss Weight
+        # d_weight = emotic.disc_weight(disc_pred, disc.float())
+
+        # Initialize Weighted Loss Functions
+        # disc_loss = nn.MSELoss(size_average=True)
+        disc_loss = emotic.DiscreteLoss()
+
         # Compute Loss & Backprop
-        d_loss = disc_loss(disc_pred, disc)
+        d_loss = disc_loss(disc_pred, disc.float())
         d_loss.backward()
 
         optimizer.step()
-        
-        train_loss += d_loss.data[0]
 
-    print('LOSS: ' + str(train_loss))
+        print(d_loss.data[0])
+        # train_loss += d_loss.data[0]
+    # print('LOSS: ' + str(train_loss))
 
 if __name__ == '__main__':
     print('='*80)
@@ -73,9 +79,11 @@ if __name__ == '__main__':
     print('-'*80)
 
     # Data Transformation and Normalization
+    # TODO: Check performance difference between Scale vs Resizing of Image
     # TODO: Check to see if we have properly normalized the image.
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
-    transform = transforms.Compose([transforms.Resize(params.IM_DIM), transforms.ToTensor(), normalize])
+    # normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+    # normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transform = transforms.Compose([transforms.Scale(params.IM_DIM), transforms.ToTensor()])
 
     # Load Dataset Generator Objects
     train_data = EMOTICData(params.DATA_DIR, params.ANNOT_DIR, 'train', transform=transform)
@@ -101,6 +109,7 @@ if __name__ == '__main__':
     # TODO: Figure method for multiple GPU use
     if params.USE_CUDA:
         print('>> CUDA USE ENABLED!')
+        print('>> GPU DEVICES AVAILABLE COUNT: ' + str(torch.cuda.device_count()))
         model.cuda()
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
         cudnn.benchmark = True
@@ -121,3 +130,5 @@ if __name__ == '__main__':
     for epoch in range(params.START_EPOCH, params.TRAIN_EPOCH+1):
         print('EPOCH ',epoch,'/',params.TRAIN_EPOCH)
         train_epoch(epoch, None, model, train_loader, optimizer)
+        
+        break
