@@ -12,6 +12,7 @@ ANNOT_DIR_TRAIN = ROOT_DIR + '/emotic/train_annot.csv'
 ANNOT_DIR_VALID = ROOT_DIR + '/emotic/valid_annot.csv'
 ANNOT_DIR_TEST  = ROOT_DIR + '/emotic/test_annot.csv'
 
+REPORT_FREQ = 10
 USE_CUDA = True
 NUM_WORKERS = 8
 
@@ -33,7 +34,7 @@ VALID_BATCH_SIZE = 52
 VALID_DATA_SHUFFLE = True
 
 START_EPOCH = 1
-TRAIN_EPOCH = 1
+TRAIN_EPOCH = 150
 
 # Loss Parameters
 W_CONT = 1.0

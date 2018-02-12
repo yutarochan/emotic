@@ -125,6 +125,12 @@ class ContinuousLoss(nn.Module):
     def forward(self, input, target):
         pass
 
+def cont_weight(input, target, weight=None):
+    if weight == 'ONES':
+        disc_w = torch.ones(params.NDIM_CONT)
+    else:
+        pass
+
 '''
 if __name__ == '__main__':
     # Discrete Loss Function Test

@@ -17,6 +17,7 @@ import params
 import emotic
 import numpy as np
 from tqdm import tqdm
+from util.meter import AverageMeter
 from util.data_csv import EMOTICData
 from emotic import EmoticCNN, DiscreteLoss
 
@@ -31,9 +32,11 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
     # train_loss = 0
     # correct = 0
     # total = 0
+
+    losses = AverageMeter()
     
     # TODO: Add a better UI for tracking the training progress of a model.
-    for batch_idx, data in enumerate(data_loader):
+    for data in tqdm(data_loader):
         # Initialize Data Variables
         image = Variable(data[0], requires_grad=True)
         body  = Variable(data[1], requires_grad=True)
@@ -54,12 +57,13 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
         # Compute Loss & Backprop
         d_loss = disc_loss(disc_pred, disc.float())
         d_loss.backward()
-
         optimizer.step()
 
-        # print(d_loss.data[0])
-        # train_loss += d_loss.data[0]
-    # print('LOSS: ' + str(train_loss))
+        # Record Accuracy and Loss Data
+        losses.update(d_loss.data[0], len(data))
+    
+    if epoch % params.TRAIN_EPOCH == params.REPORT_FREQ:
+        print('EPOCH: ' + str(i) + '\t' + str(d_loss.avg))
 
 if __name__ == '__main__':
     print('='*80)
