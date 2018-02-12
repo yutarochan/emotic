@@ -7,7 +7,10 @@ from __future__ import print_function
 ''' APPLICATION PARAMETERS '''
 ROOT_DIR = '/storage/home/yjo5006/work/emotic_data/'
 DATA_DIR = ROOT_DIR + '/emotic/'
-ANNOT_DIR = ROOT_DIR + '/annotations/Annotations.mat'
+
+ANNOT_DIR_TRAIN = ROOT_DIR + '/emotic/train_annot.csv'
+ANNOT_DIR_VALID = ROOT_DIR + '/emotic/valid_annot.csv'
+ANNOT_DIR_TEST  = ROOT_DIR + '/emotic/test_annot.csv'
 
 USE_CUDA = True
 NUM_WORKERS = 8

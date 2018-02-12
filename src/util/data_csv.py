@@ -1,5 +1,5 @@
 '''
-EMOTIC Dataset Utility
+EMOTIC Dataset Utility [CSV Version]
 Author: Yuya Jeremy Ong (yjo5006@psu.edu)
 '''
 from __future__ import print_function
@@ -9,6 +9,7 @@ import time
 import torch
 import warnings
 import numpy as np
+import pandas as pd
 from PIL import Image
 import scipy.io as sio
 from PIL import ImageFile
@@ -36,78 +37,71 @@ cat_name = ['Affection', 'Anger', 'Annoyance', 'Anticipation', 'Aversion',
             'Sympathy', 'Yearning']
 
 class EMOTICData(Dataset):
-    def __init__(self, root_dir, annotations, mode, transform):
+    def __init__(self, root_dir, annotations, transform):
         # Extract Parameters
         self.ROOT_DIR = root_dir
         self.ANOT_DIR = annotations
-        self.MODE = mode
         self.transform = transform
         
         # Load Annotation File
         start = time.time()
-        self.annot = sio.loadmat(self.ANOT_DIR)[self.MODE][0]
+        self.annot = pd.read_csv(self.ANOT_DIR, skiprows=0).dropna()
         end = time.time()
 
         # Print Statement
-        print('LOADED', self.MODE, '\t[', len(self.annot),']\t', (end - start), ' sec.')
+        print('LOADED', self.ANOT_DIR, '\t[', len(self.annot),']\t', (end - start), ' sec.')
 
     def __len__(self):
         return len(self.annot)
 
     def __getitem__(self, index):
-        print(self.annot[index])
-        # print('LOADING INDEX: ' + str(index))
         # Load Image File
-        filename = self.ROOT_DIR + '/' + self.annot[index][1][0] + '/' + self.annot[index][0][0]
-
+        filename = self.annot.iloc[index, 0]
+        
         # Extract Image
-        bb = self.annot[index][4][0][0][0][0]
+        bb = self.annot.iloc[index, [1,2,3,4]].tolist()
         image = Image.open(open(filename, 'rb')).convert('RGB')
-        body = image.crop((int(bb[0]), int(bb[1]), int(bb[3]), int(bb[2])))
+        body = image.crop((int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3])))
 
         # Extract Label
-        category = np.array([0] * len(cat_name))
-        for x in self.annot[index][4][0][0][1][0][0][0][0]: category[cat_name.index(x[0])] = 1
-        vad = np.array([x[0][0] for x in self.annot[index][4][0][0][2][0][0]])
-
-        # Perform NaN Checks
-        if np.isnan(category.any()) or np.isnan(vad.any()): return None
+        category = np.array(self.annot.iloc[index, range(5, 31)].astype(int).tolist())
+        vad = np.array(self.annot.iloc[index, range(31, 34)].astype(int).tolist())
 
         # Perform Data Transformations
         if self.transform:
             image = self.transform(image)
             body = self.transform(body)
-
+        
         return (image, body, category, vad)
 
 if __name__ == '__main__':
     ROOT_DIR = '/storage/home/yjo5006/work/emotic_data/'
-    ANOT_DIR = ROOT_DIR + '/annotations/Annotations.mat'
+    ANOT_DIR = ROOT_DIR + '/emotic/train_annot.csv'
 
     # Data Transformation and Normalization
     # TODO: Define a better normalization scheme...
-    # normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    # transform = transforms.Compose([transforms.ToTensor(), normalize])
+    normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transform = transforms.Compose([transforms.ToTensor(), normalize])
 
     # Data Transformation and Normalization
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
-    transform = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
+    # normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+    # transform = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
 
     # Load Training Data
-    '''
-    start = time.time()
-    data = EMOTICData(ROOT_DIR+'emotic/', ANOT_DIR, 'train', transform=transform)
-    end = time.time()
-    print('Train - Total Time Elapsed: ' + str(end - start) + ' sec.')
-    '''
+    # start = time.time()
+    data = EMOTICData(ROOT_DIR+'emotic/', ANOT_DIR, transform=transform)
+    print(data[325])
+    # end = time.time()
+    # print('Train - Total Time Elapsed: ' + str(end - start) + ' sec.')
 
+    # sample = data[0]
+    '''
     # Load Validation Data
     start = time.time()
     data = EMOTICData(ROOT_DIR+'emotic/', ANOT_DIR, 'val')
     end = time.time()
     print('Validation - Total Time Elapsed: ' + str(end - start) + ' sec.')
 
-    '''
     # Load Testing Data
     start = time.time()
     data = EMOTICData(ROOT_DIR+'emotic/', ANOT_DIR, 'test')
@@ -116,7 +110,7 @@ if __name__ == '__main__':
     '''
 
     # Initialize Data Loader
-    data_loader = torch.utils.data.DataLoader(data)
+    # data_loader = torch.utils.data.DataLoader(data)
 
     # Dataset Batch Loading
     # for batch_idx, sample in enumerate(data_loader):

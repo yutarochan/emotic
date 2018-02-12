@@ -17,7 +17,7 @@ import params
 import emotic
 import numpy as np
 from tqdm import tqdm
-from util.data import EMOTICData
+from util.data_csv import EMOTICData
 from emotic import EmoticCNN, DiscreteLoss
 
 # Ignore Warnings
@@ -34,9 +34,6 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
     
     # TODO: Add a better UI for tracking the training progress of a model.
     for batch_idx, data in enumerate(data_loader):
-        print('BATCH: ' + str(batch_idx))
-        # TODO: Fix underlying data loading to remove any NaN samples.
-
         # Initialize Data Variables
         image = Variable(data[0], requires_grad=True)
         body  = Variable(data[1], requires_grad=True)
@@ -51,11 +48,7 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
         optimizer.zero_grad()
         disc_pred, cont_pred = model(body, image)
 
-        # Compute Loss Weight
-        # d_weight = emotic.disc_weight(disc_pred, disc.float())
-
         # Initialize Weighted Loss Functions
-        # disc_loss = nn.MSELoss(size_average=True)
         disc_loss = emotic.DiscreteLoss()
 
         # Compute Loss & Backprop
@@ -64,7 +57,7 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
 
         optimizer.step()
 
-        print(d_loss.data[0])
+        # print(d_loss.data[0])
         # train_loss += d_loss.data[0]
     # print('LOSS: ' + str(train_loss))
 
@@ -86,9 +79,9 @@ if __name__ == '__main__':
     transform = transforms.Compose([transforms.Scale(params.IM_DIM), transforms.ToTensor()])
 
     # Load Dataset Generator Objects
-    train_data = EMOTICData(params.DATA_DIR, params.ANNOT_DIR, 'train', transform=transform)
-    valid_data = EMOTICData(params.DATA_DIR, params.ANNOT_DIR, 'val', transform=transform)
-    test_data  = EMOTICData(params.DATA_DIR, params.ANNOT_DIR, 'test', transform=transform)
+    train_data = EMOTICData(params.DATA_DIR, params.ANNOT_DIR_TRAIN, transform=transform)
+    valid_data = EMOTICData(params.DATA_DIR, params.ANNOT_DIR_VALID, transform=transform)
+    test_data  = EMOTICData(params.DATA_DIR, params.ANNOT_DIR_TEST,  transform=transform)
     
     # Initialize Dataset Loader Objects
     train_loader = DataLoader(train_data, batch_size=params.TRAIN_BATCH_SIZE, shuffle=params.TRAIN_DATA_SHUFFLE, num_workers=params.NUM_WORKERS)
@@ -106,7 +99,6 @@ if __name__ == '__main__':
     # emotic.model_summary(model)
 
     # IF USE_CUDA - Set model parameters compatible against CUDA GPU
-    # TODO: Figure method for multiple GPU use
     if params.USE_CUDA:
         print('>> CUDA USE ENABLED!')
         print('>> GPU DEVICES AVAILABLE COUNT: ' + str(torch.cuda.device_count()))
@@ -119,16 +111,11 @@ if __name__ == '__main__':
     print('Training EMOTIC CNN Baseline Model')
     print('-'*80)
     
-    # Define Cost Functions and Optimization Criterion
-    # disc_loss = emotic.DiscreteLoss()
-    # cont_loss = None
-
     # Initialize Optimizer
+    # TODO: Parameterize different methods for optimizers
     optimizer = optim.SGD(model.parameters(), lr=params.TRAIN_LR, momentum=0.9)
     
     # Perfom Training Iterations
     for epoch in range(params.START_EPOCH, params.TRAIN_EPOCH+1):
         print('EPOCH ',epoch,'/',params.TRAIN_EPOCH)
         train_epoch(epoch, None, model, train_loader, optimizer)
-        
-        break

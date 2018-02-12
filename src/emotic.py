@@ -74,10 +74,7 @@ def model_summary(model):
     for m in model.modules(): print(m)
 
 ''' Loss Function '''
-# TODO: Experiment with various loss functions to empirically observe and compare results.
-
 class DiscreteLoss(nn.Module):
-    # TODO: Enable branched execution for CUDA based processing.
     def __init__(self, weight=None):
         super(DiscreteLoss, self).__init__()
         self.weight = weight
@@ -88,11 +85,9 @@ class DiscreteLoss(nn.Module):
         else:
             sum_class = torch.sum(target, dim=0).float()
             mask = sum_class > 0.5
-            # mask = sum_class.float() > torch.FloatTensor(3).fill_(0.5)
 
             if params.USE_CUDA:
                 prev_w = torch.FloatTensor(params.NDIM_DISC).cuda() / torch.log(sum_class.data.float() + params.LDISC_C)
-                # prev_w = torch.FloatTensor(torch.ones(3)) / torch.log(sum_class.float() + torch.FloatTensor(3).fill_(1.6))
             else:
                 prev_w = torch.FloatTensor(params.NDIM_DISC) / torch.log(sum_class.data.float() + params.LDISC_C)
             
@@ -121,6 +116,14 @@ def disc_weight(input, target, weight=None):
         disc_w = mask.data.float() * prev_w
     
     return disc_w
+
+class ContinuousLoss(nn.Module):
+    def __init__(self, weight=None):
+        super(ContinuousLoss, self).__init__()
+        self.weight = weight
+
+    def forward(self, input, target):
+        pass
 
 '''
 if __name__ == '__main__':
