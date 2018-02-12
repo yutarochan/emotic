@@ -53,17 +53,22 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
 
         # Initialize Weighted Loss Functions
         disc_loss = emotic.DiscreteLoss()
+        cont_loss = emotic.ContinuousLoss()
 
         # Compute Loss & Backprop
         d_loss = disc_loss(disc_pred, disc.float())
         d_loss.backward()
+
+        cont_loss = cont_loss(cont_pred, cont.float())
+        cont_loss.backward()
+        
         optimizer.step()
 
         # Record Accuracy and Loss Data
         losses.update(d_loss.data[0], len(data))
     
     if epoch % params.TRAIN_EPOCH == params.REPORT_FREQ:
-        print('EPOCH: ' + str(i) + '\t' + str(d_loss.avg))
+        print('EPOCH: ' + str(epoch) + '\t' + str(d_loss.avg))
 
 if __name__ == '__main__':
     print('='*80)

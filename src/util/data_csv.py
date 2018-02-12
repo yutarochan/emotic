@@ -65,7 +65,7 @@ class EMOTICData(Dataset):
 
         # Extract Label
         category = np.array(self.annot.iloc[index, range(5, 31)].astype(int).tolist())
-        vad = np.array(self.annot.iloc[index, range(31, 34)].astype(int).tolist())
+        vad = np.array(self.annot.iloc[index, range(31, 34)].astype(int).tolist()) / 10.0
 
         # Perform Data Transformations
         if self.transform:

@@ -123,17 +123,32 @@ class ContinuousLoss(nn.Module):
         self.weight = weight
 
     def forward(self, input, target):
-        pass
+        # Compute Weight Values
+        if self.weight == None: self.weight = cont_weight(input, target)
+        
+        # Compute Weighted Loss
+        N = input.size()[0]
+        loss = torch.sum((input.data - target.data.float()).pow(2)) / N
+        w_loss = torch.sum(loss * self.weight, dim=0)
+
+        # Return Loss Back as Torch Tensor
+        return Variable(w_loss, requires_grad=True)
 
 def cont_weight(input, target, weight=None):
     if weight == 'ONES':
-        disc_w = torch.ones(params.NDIM_CONT)
+        cont_w = torch.ones(params.NDIM_CONT)
     else:
-        pass
+        diff = torch.sum(torch.abs(input.data - target.data).float(), dim=0) / input.data.size()[0]
+        if params.USE_CUDA:
+            cont_w = diff > torch.FloatTensor(params.NDIM_CONT).fill_(params.LOSS_CONT_MARGIN).cuda()
+        else:
+            cont_w = diff > torch.FloatTensor(params.NDIM_CONT).fill_(params.LOSS_CONT_MARGIN)
+    
+    return cont_w.float()
 
-'''
 if __name__ == '__main__':
     # Discrete Loss Function Test
+    '''
     loss = DiscreteLoss()
     
     y_pred = torch.LongTensor([[1, 0, 1], [0, 1, 1]]).cuda()
@@ -141,4 +156,13 @@ if __name__ == '__main__':
 
     out = loss(y_pred, y_real)
     print(out)
-'''
+    '''
+
+    # Continuous Loss Function Test
+    y_pred = torch.FloatTensor([[3, 7, 5], [2, 7, 8]]).cuda() / 10.0
+    y_real = torch.FloatTensor([[4, 2, 3], [3, 4, 9]]).cuda() / 10.0
+
+    loss = ContinuousLoss()
+    
+    out = loss(y_pred, y_real)
+    print(out)
