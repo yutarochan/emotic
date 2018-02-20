@@ -73,6 +73,9 @@ class Flatten(nn.Module):
 def model_summary(model):
     for m in model.modules(): print(m)
 
+def save_model(model, path):
+    torch.save(model, path)
+
 ''' Loss Function '''
 class DiscreteLoss(nn.Module):
     def __init__(self, weight=None):
@@ -97,7 +100,7 @@ class DiscreteLoss(nn.Module):
         N = input.size()[0]
         loss = torch.sum((input.data - target.data.float()).pow(2), dim=0) / N
         w_loss = torch.sum(loss * disc_w, dim=0)
-        
+
         # Return Loss Back as Torch Tensor
         return Variable(w_loss, requires_grad=True)
 
