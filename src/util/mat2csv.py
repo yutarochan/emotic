@@ -60,7 +60,7 @@ def csv_writer(data_loader, csv_writer, remove_nan=True):
     print(len(data_loader))
     for i in range(len(data_loader)):
         data = data_loader[i]
-        if data is None: print("DATA IS FUCKED!")
+        if data is None: print("Dat Corrupted!")
         if remove_nan and data is None: continue
         output = data[0] + ','
         output += ','.join([str(i) for i in data[1]]) + ','
