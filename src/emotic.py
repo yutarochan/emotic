@@ -76,6 +76,9 @@ def model_summary(model):
 def save_model(model, path):
     torch.save(model, path)
 
+def load_model(path):
+    return torch.load(path)
+
 ''' Loss Function '''
 class DiscreteLoss(nn.Module):
     def __init__(self, weight=None):

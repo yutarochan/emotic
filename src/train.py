@@ -16,6 +16,7 @@ import time
 import params
 import emotic
 import numpy as np
+import util.loss_log
 from tqdm import tqdm
 import torchnet as tnt
 from util.meter import AverageMeter
@@ -34,14 +35,14 @@ if params.VISTORCH_LOG:
 def train_epoch(epoch, args, model, data_loader, optimizer):
     model.train()
     
-    # TODO: Setup better metric evaluation class to handle data logging and visualization to visdom.
+    # Loss Value Variables
     train_dloss = 0
     train_closs = 0
-    # correct = 0
-    # total = 0
 
-    # losses = AverageMeter()
+    # Batch Size Counter
+    bcnt = 0
 
+    # Training Minibatch Iteration
     for i, data in enumerate(tqdm(data_loader)):
         # Initialize Data Variables
         image = Variable(data[0], requires_grad=True)
@@ -58,40 +59,88 @@ def train_epoch(epoch, args, model, data_loader, optimizer):
         disc_pred, cont_pred = model(body, image)
 
         # Initialize Weighted Loss Functions
-        disc_loss = emotic.DiscreteLoss()
-        cont_loss = emotic.ContinuousLoss()
+        disc_loss = nn.MultiLabelMarginLoss()
+        cont_loss = nn.MSELoss()
 
-        # Compute Loss & Backprop
-        # d_loss = disc_loss(pr
-        '''
-        d_loss = disc_loss(disc_pred, disc.float())
-        d_loss.backward()
-
-        optimizer.step()
-
+        # Compute Test Loss
+        d_loss = disc_loss(disc_pred, disc)
         c_loss = cont_loss(cont_pred, cont.float())
-        c_loss.backward()
-        optimizer.step()
-        '''
         
+        # Backprop
+        d_loss.backward(retain_graph=True)
+        c_loss.backward()
+        
+        optimizer.step()
+
         # Record Accuracy and Loss Data
         train_dloss += d_loss.data[0]
         train_closs += c_loss.data[0]
-
-        print(d_loss.data)
 
         # Update Log Dashboard Data Point
         if params.VISTORCH_LOG:
             mlog.update_loss(d_loss.data, meter='Discrete Loss')
         
-    # Update Plot
-    print('D_LOSS: ' + str(train_dloss) + '\tC_LOSS: ' + str(train_closs))
+        # Update Batch Counter
+        bcnt += 1
+
+    # Report Loss
+    print('[TRAIN LOSS]\tD_LOSS: ' + str(train_dloss/float(bcnt)) + '\tC_LOSS: ' + str(train_closs/float(bcnt)))
 
     if params.VISTORCH_LOG:
         mlog.print_meter(mode="Train", iepoch=epoch)
         mlog.reset_meter(mode="Train", iepoch=epoch)
 
-    # TODO: Implement Intermediate Model Persistencee
+    # Persist Loss to Log
+    util.loss_log.write(params.LOSS_LOG_DIR + '/emotic_basline_train_loss.csv', str(epoch) + ',' + str(train_dloss/float(bcnt)) + ',' + str(train_closs/float(bcnt)))
+
+    # Intermediate Model Persistence Routine
+    if epoch % params.SAVE_FREQ == 0:
+        print('>> MODEL CHECKPOINT PERSISTED') 
+        emotic.save_model(model, params.MODEL_DIR + '/emotic_baseline_' + str(epoch) + '_' + str(params.TRAIN_EPOCH) + '.pth')
+
+def valid_epoch(epoch, args, model, data_loader):
+    # Loss Value Variables                                                                                                                                                                                                                                                              
+    valid_dloss = 0
+    valid_closs = 0
+
+    # Batch Size Counter                                                                                                                                                                                                                                                                     
+    bcnt = 0
+
+    # Validation Minibatch Iteration                                                                                                                                                                                         
+    for i, data in enumerate(tqdm(data_loader)):
+        # Initialize Data Variables                                                                                                                                                                                                                                                          
+        image = Variable(data[0], requires_grad=False)
+        body  = Variable(data[1], requires_grad=False)
+        disc  = Variable(data[2], requires_grad=False)
+        cont  = Variable(data[3], requires_grad=False)
+
+        # Utilize CUDA                                                                                                                                                                                                                                                                       
+        if params.USE_CUDA:
+            body, image, disc, cont = body.cuda(), image.cuda(), disc.cuda(), cont.cuda()
+
+        # Generate Predictions                                                                                                                                                                                                                                                               
+        disc_pred, cont_pred = model(body, image)
+
+        # Initialize Weighted Loss Functions                                                                                                                                                                                                                                                
+        disc_loss = nn.MultiLabelMarginLoss()
+        cont_loss = nn.MSELoss()
+
+        # Compute Test Loss                                                                                                                                                                                                                                                                  
+        d_loss = disc_loss(disc_pred, disc)
+        c_loss = cont_loss(cont_pred, cont.float())
+        
+        # Record Accuracy and Loss Data                                                                                                                                                                                                                                                      
+        valid_dloss += d_loss.data[0]
+        valid_closs += c_loss.data[0]        
+
+        # Update Batch Counter
+        bcnt += 1
+    
+    # Report Loss                                                                                                                                                                                                                                                                           
+    print('[VALID LOSS]\tD_LOSS: ' + str(valid_dloss/float(bcnt)) + '\tC_LOSS: ' + str(valid_closs/float(bcnt)))
+
+    # Persist Loss to Log                                                                                                                                                                                                                                                                    
+    util.loss_log.write(params.LOSS_LOG_DIR + '/emotic_basline_valid_loss.csv', str(epoch) + ',' + str(valid_dloss/float(bcnt)) + ',' + str(valid_closs/float(bcnt)))
 
 if __name__ == '__main__':
     print('='*80)
@@ -105,7 +154,7 @@ if __name__ == '__main__':
 
     # Data Transformation and Normalization
     # TODO: Use the normalization constants from the emotic_tf codebase!
-    # normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+    normalize = transforms.Normalize(mean=params.EMOTIC_MEAN, std=params.EMOTIC_STD)
     transform = transforms.Compose([transforms.Scale(params.IM_DIM), transforms.ToTensor()])
 
     # Load Dataset Generator Objects
@@ -143,9 +192,13 @@ if __name__ == '__main__':
     
     # Initialize Optimizer
     # TODO: Parameterize different methods for optimizers
-    optimizer = optim.SGD(model.parameters(), lr=params.TRAIN_LR, momentum=0.9)
+    optimizer = optim.Adam(model.parameters(), lr=params.TRAIN_LR)
     
     # Perfom Training Iterations
     for epoch in range(params.START_EPOCH, params.TRAIN_EPOCH+1):
         print('EPOCH '+str(epoch)+'/'+str(params.TRAIN_EPOCH))
         train_epoch(epoch, None, model, train_loader, optimizer)
+        valid_epoch(epoch, None, model, valid_loader)
+
+    # Save Model
+    emotic.save_model(model, params.MODEL_DIR + '/emotic_baseline.pth')
