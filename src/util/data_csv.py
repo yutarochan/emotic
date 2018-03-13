@@ -28,7 +28,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # TODO: Implement thread safe method for concurrency handling and data IO pipelining to improve data load procedure to mask behind GPU.
 
-# Emotion Categories                                                                                                                                                                                                                        
+# Emotion Categories                                                                                                
 cat_name = ['Affection', 'Anger', 'Annoyance', 'Anticipation', 'Aversion',
             'Confidence', 'Disapproval', 'Disconnection', 'Disquietment',
             'Doubt/Confusion', 'Embarrassment', 'Engagement', 'Esteem',

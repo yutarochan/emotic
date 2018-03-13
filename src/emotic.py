@@ -18,11 +18,14 @@ class EmoticCNN(nn.Module):
         super(EmoticCNN, self).__init__()
         
         # Initialize VGG16 Model
-        vgg16 = torchvision.models.vgg16(pretrained=True)
+        vgg16_1 = torchvision.models.vgg16(pretrained=False)
+        vgg16_2 = torchvision.models.vgg16(pretrained=False)
+
+        print(vgg16_1 == vgg16_2)
 
         # Setup Feature Channels
-        self.body_channel = vgg16.features
-        self.image_channel = vgg16.features
+        self.body_channel = vgg16_1.features
+        self.image_channel = vgg16_2.features
 
         # Average Fusion Layers
         self.avg_pool_body = nn.AvgPool2d(4, stride=1)
@@ -61,8 +64,9 @@ class EmoticCNN(nn.Module):
 
         # Output Layers
         y_1 = F.softmax(self.discrete_out(out))
-        y_2 = self.vad_out(out)
-        
+        # y_2 = self.vad_out(out)
+        y_2 = None
+
         return y_1, y_2
 
 # Auxillary Flatten Function
@@ -87,7 +91,7 @@ class DiscreteLoss(nn.Module):
 
     def forward(self, input, target):
         if self.weight:
-            disc_w = torch.ones(params.NDIM_DISC)
+            disc_w = torch.ones(params.NDIM_DISC, 'ONES')
         else:
             sum_class = torch.sum(target, dim=0).float()
             mask = sum_class > 0.5
@@ -101,7 +105,7 @@ class DiscreteLoss(nn.Module):
 
         # Compute Weighted Loss
         N = input.size()[0]
-        loss = torch.sum((input.data - target.data.float()).pow(2), dim=0) / N
+        loss = torch.sum((input.data - target.data.float()) * (input.data - target.data.float()), dim=0) / N
         w_loss = torch.sum(loss * disc_w, dim=0)
 
         # Return Loss Back as Torch Tensor

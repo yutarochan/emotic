@@ -8,7 +8,7 @@ import torch.nn as nn
 import numpy as np
 import scipy.io as sio
 
-# Emotion Categories                                                                                                                                                                                                                                                                          
+# Emotion Categories                                                      
 cat_name = ['Affection', 'Anger', 'Annoyance', 'Anticipation', 'Aversion',
             'Confidence', 'Disapproval', 'Disconnection', 'Disquietment',
             'Doubt/Confusion', 'Embarrassment', 'Engagement', 'Esteem',
@@ -41,7 +41,7 @@ class EMOTICData(nn.Module):
         # Extract Image                                                                                                                                                                                                              
         bb = self.annot[index][4][0][0][0][0]
 
-        # Extract Label                                                                                              
+        # Extract Label
         category = np.array([0] * len(cat_name), dtype=np.float64)
         if self.MODE == 'train':
             for x in self.annot[index][4][0][0][1][0][0][0][0]: category[cat_name.index(x[0])] = 1
