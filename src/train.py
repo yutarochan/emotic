@@ -35,10 +35,6 @@ warnings.filterwarnings("ignore")
 if params.VISTORCH_LOG:
     mlog = MeterLogger(server='localhost', port=8097, title="EMOTIC CNN Baseline")
 
-# Setup Best Model Tracker
-BEST_MODEL = copy.deepcopy(model.state_dict())
-BEST_ACC = 0.0
-
 def train(model, optimizer, scheduler, data_loader, epoch):
     # Set Model to Training Mode
     scheduler.step()
@@ -201,7 +197,6 @@ if __name__ == '__main__':
     print('-'*80)
 
     # Data Transformation and Normalization
-    # TODO: Use the normalization constants from the emotic_tf codebase!
     normalize = transforms.Normalize(mean=params.EMOTIC_MEAN, std=params.EMOTIC_STD)
     transform = transforms.Compose([transforms.Scale(params.IM_DIM), transforms.ToTensor(), normalize])
 
@@ -223,7 +218,7 @@ if __name__ == '__main__':
     model = emotic.EmoticCNN()
 
     # Display Model Module Summary Information
-    emotic.model_summary(model)
+    # emotic.model_summary(model)
 
     # IF USE_CUDA - Set model parameters compatible against CUDA GPU
     if params.USE_CUDA:
