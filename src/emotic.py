@@ -16,12 +16,10 @@ from torch.autograd import Variable
 class EmoticCNN(nn.Module):
     def __init__(self):
         super(EmoticCNN, self).__init__()
-        
-        # Initialize VGG16 Model
-        vgg16_1 = torchvision.models.vgg16(pretrained=False)
-        vgg16_2 = torchvision.models.vgg16(pretrained=False)
 
-        print(vgg16_1 == vgg16_2)
+        # Initialize VGG16 Model
+        vgg16_1 = torchvision.models.vgg16(pretrained=True)
+        vgg16_2 = torchvision.models.vgg16(pretrained=True)
 
         # Setup Feature Channels
         self.body_channel = vgg16_1.features
@@ -29,8 +27,8 @@ class EmoticCNN(nn.Module):
 
         # Average Fusion Layers
         self.avg_pool_body = nn.AvgPool2d(4, stride=1)
-        self.avg_pool_imag = nn.AvgPool2d(3, stride=16)
-        
+        self.avg_pool_imag = nn.AvgPool2d(4, stride=16)
+
         # Feature Flatten Layers
         self.flat_body = Flatten()
         self.flat_imag = Flatten()
@@ -52,7 +50,7 @@ class EmoticCNN(nn.Module):
         # Global Average Pooling
         x_1 = self.avg_pool_body(x_1)
         x_2 = self.avg_pool_imag(x_2)
-        
+
         # Flatten Layers
         x_1 = self.flat_body(x_1)
         x_2 = self.flat_imag(x_2)
@@ -64,8 +62,7 @@ class EmoticCNN(nn.Module):
 
         # Output Layers
         y_1 = F.softmax(self.discrete_out(out))
-        # y_2 = self.vad_out(out)
-        y_2 = None
+        y_2 = self.vad_out(out)
 
         return y_1, y_2
 
@@ -100,7 +97,7 @@ class DiscreteLoss(nn.Module):
                 prev_w = torch.FloatTensor(params.NDIM_DISC).cuda() / torch.log(sum_class.data.float() + params.LDISC_C)
             else:
                 prev_w = torch.FloatTensor(params.NDIM_DISC) / torch.log(sum_class.data.float() + params.LDISC_C)
-            
+
             disc_w = mask.data.float() * prev_w
 
         # Compute Weighted Loss
@@ -124,7 +121,7 @@ def disc_weight(input, target, weight=None):
             prev_w = torch.FloatTensor(params.NDIM_DISC) / torch.log(sum_class.data.float() + params.LDISC_C)
 
         disc_w = mask.data.float() * prev_w
-    
+
     return disc_w
 
 class ContinuousLoss(nn.Module):
@@ -135,7 +132,7 @@ class ContinuousLoss(nn.Module):
     def forward(self, input, target):
         # Compute Weight Values
         if self.weight == None: self.weight = cont_weight(input, target)
-        
+
         # Compute Weighted Loss
         N = input.size()[0]
         loss = torch.sum((input.data - target.data.float()).pow(2)) / N
@@ -153,14 +150,14 @@ def cont_weight(input, target, weight=None):
             cont_w = diff > torch.FloatTensor(params.NDIM_CONT).fill_(params.LOSS_CONT_MARGIN).cuda()
         else:
             cont_w = diff > torch.FloatTensor(params.NDIM_CONT).fill_(params.LOSS_CONT_MARGIN)
-    
+
     return cont_w.float()
 
 if __name__ == '__main__':
     # Discrete Loss Function Test
     '''
     loss = DiscreteLoss()
-    
+
     y_pred = torch.LongTensor([[1, 0, 1], [0, 1, 1]]).cuda()
     y_real = torch.LongTensor([[0, 1, 1], [1, 1, 0]]).cuda()
 
@@ -173,6 +170,6 @@ if __name__ == '__main__':
     y_real = torch.FloatTensor([[4, 2, 3], [3, 4, 9]]).cuda() / 10.0
 
     loss = ContinuousLoss()
-    
+
     out = loss(y_pred, y_real)
     print(out)
